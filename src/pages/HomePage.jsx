@@ -39,19 +39,27 @@ export default function HomePage() {
     }
   }, [])
 
-  // Start a 10-second timer to auto-clear the scanned results
+  // Start a 5-second timer to auto-clear the scanned results
   const triggerResetTimer = useCallback(() => {
     clearResetTimer()
     resetTimeoutRef.current = setTimeout(() => {
       setStudent(null)
       setNotFound(false)
       setError(null)
-    }, 10000)
+    }, 5000) // 5 seconds
   }, [clearResetTimer])
 
   // Clean up timer on unmount
   useEffect(() => {
     return () => clearResetTimer()
+  }, [clearResetTimer])
+
+  // Explicitly clear all states (e.g. on close click)
+  const clearAllStates = useCallback(() => {
+    clearResetTimer()
+    setStudent(null)
+    setNotFound(false)
+    setError(null)
   }, [clearResetTimer])
 
   /** Core lookup logic — used by both QR scan and manual entry */
@@ -69,19 +77,18 @@ export default function HomePage() {
     const { data, error: err } = await getStudentById(cleanId)
 
     if (err && err.code !== 'PGRST116') {
-      // PGRST116 = "no rows found", which is handled below
       console.error('[HomePage] Lookup error:', err)
       setError(`Database error: ${err.message || 'Unknown error'}`)
       playError()
-      triggerResetTimer() // Clear error after 10s
+      triggerResetTimer() // Clear error after 5s
     } else if (!data) {
       setNotFound(true)
       playError()
-      triggerResetTimer() // Clear "Not Found" state after 10s
+      triggerResetTimer() // Clear "Not Found" state after 5s
     } else if (data.attendance) {
       setStudent(data)
       playWarning() // Already checked in
-      triggerResetTimer() // Clear "Already Checked In" card after 10s
+      triggerResetTimer() // Clear "Already Checked In" card after 5s
     } else {
       setStudent(data)
       playSuccess()
@@ -101,11 +108,11 @@ export default function HomePage() {
     setStudent(updatedStudent)
     setHistoryKey((k) => k + 1) // refresh scan history
     playSuccess()
-    triggerResetTimer() // Auto-clear approved student card after 10s
+    triggerResetTimer() // Auto-clear approved student card after 5s
   }, [playSuccess, triggerResetTimer])
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-xl mx-auto px-4 py-8">
       {/* ── Page Header ── */}
       <div className="text-center mb-8">
         <h1
@@ -126,121 +133,121 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── Main layout: Centered single-column optimized for mobile ── */}
-      <div className="max-w-xl mx-auto flex flex-col gap-6 mb-8">
+      {/* ── Center Content ── */}
+      <div className="flex flex-col gap-6 mb-8">
 
-        {/* ── Result Panel (TOP) ── */}
-        <div className="flex flex-col gap-4">
-          {/* Loading */}
-          {loading && (
-            <div className="glass-card p-8 flex flex-col items-center gap-4 animate-fade-in">
-              <Spinner size="lg" />
-              <div>
-                <p className="text-gray-400 text-sm text-center">Looking up student…</p>
-                <p className="text-gray-600 text-xs text-center font-mono mt-1">{lastScannedId}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className="animate-slide-up">
-              <ErrorMessage message={error} type="error" onDismiss={() => setError(null)} />
-            </div>
-          )}
-
-          {/* Not Found */}
-          {!loading && notFound && (
-            <div className="glass-card p-8 text-center animate-slide-up"
-              style={{ border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)' }}>
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping opacity-75" />
-                  <svg className="w-20 h-20 relative z-10 filter drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="#ef4444" strokeWidth="8" />
-                    <path d="M33 33 L67 67 M67 33 L33 67" fill="none" stroke="#ef4444" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-red-400 font-bold text-xl mb-2">Student Not Found</p>
-              <p className="text-gray-500 text-sm font-mono break-all">{lastScannedId}</p>
-              <p className="text-gray-600 text-xs mt-2">
-                No registration found for this ID.
-              </p>
-            </div>
-          )}
-
-          {/* Student Card */}
-          {!loading && student && (
-            <div className="animate-slide-up">
-              <StudentCard
-                student={student}
-                onApproved={handleApproved}
-              />
-            </div>
-          )}
-
-          {/* Compact Idle/Ready Status Indicator */}
-          {!loading && !error && !notFound && !student && (
-            <div className="glass-card py-4 px-6 flex items-center justify-center gap-3 text-center animate-fade-in">
-              <span className="text-xl animate-pulse">📷</span>
-              <p className="text-gray-400 text-sm font-mono">Scanner ready. Waiting for QR scan…</p>
-            </div>
-          )}
-        </div>
-
-        {/* ── Scanner Panel (BOTTOM) ── */}
-        <div className="flex flex-col gap-4">
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-white">Camera Scanner</h2>
+        {/* ── Camera Scanner & Overlay Container ── */}
+        <div className="glass-card p-5 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-white">Camera Scanner</h2>
+            <span
+              className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border ${
+                scannerActive
+                  ? 'border-green-700/50 bg-green-900/30 text-green-400'
+                  : 'border-gray-700/50 bg-gray-900/30 text-gray-500'
+              }`}
+            >
               <span
-                className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border ${
-                  scannerActive
-                    ? 'border-green-700/50 bg-green-900/30 text-green-400'
-                    : 'border-gray-700/50 bg-gray-900/30 text-gray-500'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${scannerActive ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`}
-                />
-                {scannerActive ? 'LIVE' : 'STOPPED'}
-              </span>
-            </div>
+                className={`w-1.5 h-1.5 rounded-full ${scannerActive ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`}
+              />
+              {scannerActive ? 'LIVE' : 'STOPPED'}
+            </span>
+          </div>
 
-            {/* Scanner */}
+          {/* Scanner view with absolute result overlay */}
+          <div className="relative rounded-2xl overflow-hidden bg-black min-h-[300px]">
+            {/* Live Camera Feed */}
             <QRScanner
               isActive={scannerActive}
               onScan={handleScan}
               pauseMs={2000}
             />
 
-            {/* Start / Stop buttons */}
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => setScannerActive(true)}
-                disabled={scannerActive}
-                className="btn-neon flex-1 text-sm py-3"
-                id="start-scanner-btn"
-              >
-                ▶ Start Scanner
-              </button>
-              <button
-                onClick={() => setScannerActive(false)}
-                disabled={!scannerActive}
-                className="btn-outline flex-1 text-sm py-3"
-                id="stop-scanner-btn"
-              >
-                ■ Stop Scanner
-              </button>
-            </div>
+            {/* Results Overlay (Completely fills the camera space) */}
+            {(loading || student || notFound || error) && (
+              <div className="absolute inset-0 z-30 bg-black/95 flex flex-col justify-center p-5 overflow-y-auto animate-fade-in">
+                {/* Manual Dismiss button */}
+                <button
+                  onClick={clearAllStates}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors text-2xl font-semibold leading-none z-40 p-2"
+                  aria-label="Dismiss result"
+                >
+                  ×
+                </button>
+
+                {/* Loading state overlay */}
+                {loading && (
+                  <div className="flex flex-col items-center gap-4 py-8">
+                    <Spinner size="lg" />
+                    <div>
+                      <p className="text-gray-400 text-sm text-center">Looking up student…</p>
+                      <p className="text-gray-600 text-xs text-center font-mono mt-1">{lastScannedId}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Database/Network Error overlay */}
+                {!loading && error && (
+                  <div className="py-4">
+                    <ErrorMessage message={error} type="error" onDismiss={clearAllStates} />
+                  </div>
+                )}
+
+                {/* Student Not Found (Red Cross) overlay */}
+                {!loading && notFound && (
+                  <div className="text-center py-6">
+                    <div className="flex justify-center mb-4">
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping opacity-75" />
+                        <svg className="w-16 h-16 relative z-10 filter drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="44" fill="none" stroke="#ef4444" strokeWidth="8" />
+                          <path d="M33 33 L67 67 M67 33 L33 67" fill="none" stroke="#ef4444" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-red-400 font-bold text-xl mb-2">Student Not Found</p>
+                    <p className="text-gray-500 text-sm font-mono break-all px-4">{lastScannedId}</p>
+                  </div>
+                )}
+
+                {/* Valid/Invalid Student Card details overlay */}
+                {!loading && student && (
+                  <div className="w-full max-h-full">
+                    <StudentCard
+                      student={student}
+                      onApproved={handleApproved}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* ── Manual Entry ── */}
-          <div className="glass-card p-5">
-            <h2 className="font-semibold text-white mb-3">Manual ID Entry</h2>
-            <ManualEntry onSearch={lookupStudent} loading={loading} />
+          {/* Start / Stop buttons */}
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={() => setScannerActive(true)}
+              disabled={scannerActive}
+              className="btn-neon flex-1 text-sm py-3"
+              id="start-scanner-btn"
+            >
+              ▶ Start Scanner
+            </button>
+            <button
+              onClick={() => setScannerActive(false)}
+              disabled={!scannerActive}
+              className="btn-outline flex-1 text-sm py-3"
+              id="stop-scanner-btn"
+            >
+              ■ Stop Scanner
+            </button>
           </div>
+        </div>
+
+        {/* ── Manual Entry ── */}
+        <div className="glass-card p-5">
+          <h2 className="font-semibold text-white mb-3">Manual ID Entry</h2>
+          <ManualEntry onSearch={lookupStudent} loading={loading} />
         </div>
 
       </div>
