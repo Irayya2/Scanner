@@ -126,10 +126,70 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── Main layout: scanner left, card right ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* ── Main layout: Centered single-column optimized for mobile ── */}
+      <div className="max-w-xl mx-auto flex flex-col gap-6 mb-8">
 
-        {/* ── Scanner Panel ── */}
+        {/* ── Result Panel (TOP) ── */}
+        <div className="flex flex-col gap-4">
+          {/* Loading */}
+          {loading && (
+            <div className="glass-card p-8 flex flex-col items-center gap-4 animate-fade-in">
+              <Spinner size="lg" />
+              <div>
+                <p className="text-gray-400 text-sm text-center">Looking up student…</p>
+                <p className="text-gray-600 text-xs text-center font-mono mt-1">{lastScannedId}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="animate-slide-up">
+              <ErrorMessage message={error} type="error" onDismiss={() => setError(null)} />
+            </div>
+          )}
+
+          {/* Not Found */}
+          {!loading && notFound && (
+            <div className="glass-card p-8 text-center animate-slide-up"
+              style={{ border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)' }}>
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping opacity-75" />
+                  <svg className="w-20 h-20 relative z-10 filter drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#ef4444" strokeWidth="8" />
+                    <path d="M33 33 L67 67 M67 33 L33 67" fill="none" stroke="#ef4444" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-red-400 font-bold text-xl mb-2">Student Not Found</p>
+              <p className="text-gray-500 text-sm font-mono break-all">{lastScannedId}</p>
+              <p className="text-gray-600 text-xs mt-2">
+                No registration found for this ID.
+              </p>
+            </div>
+          )}
+
+          {/* Student Card */}
+          {!loading && student && (
+            <div className="animate-slide-up">
+              <StudentCard
+                student={student}
+                onApproved={handleApproved}
+              />
+            </div>
+          )}
+
+          {/* Compact Idle/Ready Status Indicator */}
+          {!loading && !error && !notFound && !student && (
+            <div className="glass-card py-4 px-6 flex items-center justify-center gap-3 text-center animate-fade-in">
+              <span className="text-xl animate-pulse">📷</span>
+              <p className="text-gray-400 text-sm font-mono">Scanner ready. Waiting for QR scan…</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Scanner Panel (BOTTOM) ── */}
         <div className="flex flex-col gap-4">
           <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-4">
@@ -183,68 +243,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── Result Panel ── */}
-        <div className="flex flex-col gap-4">
-          {/* Loading */}
-          {loading && (
-            <div className="glass-card p-10 flex flex-col items-center gap-4 animate-fade-in">
-              <Spinner size="lg" />
-              <div>
-                <p className="text-gray-400 text-sm text-center">Looking up student…</p>
-                <p className="text-gray-600 text-xs text-center font-mono mt-1">{lastScannedId}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className="animate-slide-up">
-              <ErrorMessage message={error} type="error" onDismiss={() => setError(null)} />
-            </div>
-          )}
-
-          {/* Not Found */}
-          {!loading && notFound && (
-            <div className="glass-card p-8 text-center animate-slide-up"
-              style={{ border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)' }}>
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping opacity-75" />
-                  <svg className="w-20 h-20 relative z-10 filter drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="#ef4444" strokeWidth="8" />
-                    <path d="M33 33 L67 67 M67 33 L33 67" fill="none" stroke="#ef4444" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-red-400 font-bold text-xl mb-2">Student Not Found</p>
-              <p className="text-gray-500 text-sm font-mono break-all">{lastScannedId}</p>
-              <p className="text-gray-600 text-xs mt-2">
-                No registration found for this ID.
-              </p>
-            </div>
-          )}
-
-          {/* Student Card */}
-          {!loading && student && (
-            <div className="animate-slide-up">
-              <StudentCard
-                student={student}
-                onApproved={handleApproved}
-              />
-            </div>
-          )}
-
-          {/* Idle placeholder */}
-          {!loading && !error && !notFound && !student && (
-            <div className="glass-card p-10 flex flex-col items-center justify-center gap-3 text-center" style={{ minHeight: 240 }}>
-              <div className="text-5xl opacity-20">🎫</div>
-              <p className="text-gray-600 text-sm font-mono">Waiting for scan…</p>
-              <p className="text-gray-700 text-xs">
-                Start the camera or type an ID manually
-              </p>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ── Scan History ── */}
