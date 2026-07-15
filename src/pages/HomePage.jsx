@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { getStudentById } from '../lib/supabase'
+import { getStudentById, approveEntry } from '../lib/supabase'
 import { useSound } from '../hooks/useSound'
 import QRScanner from '../components/QRScanner'
 import StudentCard from '../components/StudentCard'
@@ -86,13 +86,24 @@ export default function HomePage() {
       playError()
       triggerResetTimer() // Clear "Not Found" state after 5s
     } else if (data.attendance) {
-      setStudent(data)
-      playWarning() // Already checked in
-      triggerResetTimer() // Clear "Already Checked In" card after 5s
+      // Repeated scan -> show red cross warning with isRepeatedScan=true flag
+      setStudent({ ...data, isRepeatedScan: true })
+      playWarning()
+      triggerResetTimer() // Clear warning card after 5s
     } else {
-      setStudent(data)
-      playSuccess()
-      // Note: We do NOT set the timer here because the volunteer needs time to click "Approve Entry"
+      // Valid scan, not checked in yet -> Auto Approve immediately!
+      const { data: approvedData, error: approveErr } = await approveEntry(cleanId)
+      if (approveErr) {
+        console.error('[HomePage] Auto-approve error:', approveErr)
+        setError('Database connection error. Failed to record attendance.')
+        playError()
+        triggerResetTimer()
+      } else if (approvedData) {
+        setStudent({ ...approvedData, isRepeatedScan: false })
+        setHistoryKey((k) => k + 1) // Refresh scan history listing
+        playSuccess()
+        triggerResetTimer() // Clear success details card after 5s
+      }
     }
 
     setLoading(false)
@@ -103,12 +114,12 @@ export default function HomePage() {
     lookupStudent(id)
   }, [lookupStudent])
 
-  /** Called after student card approves entry */
+  /** Called after manual/deep-link updates (kept as fallback wrapper) */
   const handleApproved = useCallback((updatedStudent) => {
     setStudent(updatedStudent)
-    setHistoryKey((k) => k + 1) // refresh scan history
+    setHistoryKey((k) => k + 1)
     playSuccess()
-    triggerResetTimer() // Auto-clear approved student card after 5s
+    triggerResetTimer()
   }, [playSuccess, triggerResetTimer])
 
   return (

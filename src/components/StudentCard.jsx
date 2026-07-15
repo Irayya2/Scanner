@@ -64,7 +64,7 @@ export default function StudentCard({ student, onApproved }) {
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-neon-500/10 rounded-full blur-2xl pointer-events-none" />
 
       {/* Checkmark or Cross Banner depending on status */}
-      {localStudent.attendance ? (
+      {localStudent.isRepeatedScan ? (
         /* Repeated Check-in scan (Red Cross) */
         <div className="flex flex-col items-center justify-center text-center pb-6 mb-6 border-b border-white/10">
           <div className="relative mb-2">
@@ -89,7 +89,7 @@ export default function StudentCard({ student, onApproved }) {
             </svg>
           </div>
           <span className="text-neon-500 font-mono text-sm tracking-widest uppercase font-bold animate-pulse" style={{ color: '#39ff14' }}>
-            ✓ VALID QR CODE
+            ✓ ENTRY APPROVED
           </span>
         </div>
       )}
@@ -118,10 +118,10 @@ export default function StudentCard({ student, onApproved }) {
 
         {/* Status badge */}
         <div className="flex-shrink-0">
-          {localStudent.attendance ? (
-            <span className="badge-success">✅ Checked In</span>
+          {localStudent.isRepeatedScan ? (
+            <span className="badge-warning">⚠️ Already Checked In</span>
           ) : (
-            <span className="badge-pending">⏳ Pending</span>
+            <span className="badge-success">✅ Checked In</span>
           )}
         </div>
       </div>
@@ -131,49 +131,33 @@ export default function StudentCard({ student, onApproved }) {
         <InfoField label="Email" value={localStudent.gmail || '—'} className="col-span-2" />
         <InfoField label="Semester" value={localStudent.sem  || '—'} />
         <InfoField label="Division" value={localStudent.div  || '—'} />
-        {localStudent.attendance && (
+        <InfoField label="Entry Date" value={formatDate(localStudent.entry_time)} />
+        <InfoField label="Entry Time" value={formatTime(localStudent.entry_time)} highlight />
+      </div>
+
+      {/* Status Message */}
+      <div className="rounded-xl px-4 py-4 text-center border"
+        style={
+          localStudent.isRepeatedScan 
+            ? { background: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.25)' }
+            : { background: 'rgba(57,255,20,0.05)', borderColor: 'rgba(57,255,20,0.25)' }
+        }>
+        {localStudent.isRepeatedScan ? (
           <>
-            <InfoField label="Entry Date" value={formatDate(localStudent.entry_time)} />
-            <InfoField label="Entry Time" value={formatTime(localStudent.entry_time)} highlight />
+            <p className="text-red-400 font-semibold text-base mb-1">Entry Denied (Already In)</p>
+            <p className="text-red-300/60 text-xs font-mono">
+              Scanned at {formatTime(localStudent.entry_time)}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-neon-500 font-semibold text-base mb-1" style={{ color: '#39ff14' }}>Attendance Recorded</p>
+            <p className="text-neon-500/60 text-xs font-mono" style={{ color: 'rgba(57,255,20,0.6)' }}>
+              Checked in at {formatTime(localStudent.entry_time)}
+            </p>
           </>
         )}
       </div>
-
-      {/* Action */}
-      {localStudent.attendance ? (
-        /* Already checked in */
-        <div className="rounded-xl px-4 py-4 text-center border"
-          style={{ background: 'rgba(250,204,21,0.05)', borderColor: 'rgba(250,204,21,0.25)' }}>
-          <p className="text-yellow-400 font-semibold text-lg mb-1">⚠ Already Checked In</p>
-          <p className="text-yellow-300/60 text-sm font-mono">
-            Entry recorded at {formatTime(localStudent.entry_time)}
-          </p>
-        </div>
-      ) : (
-        /* Approve button */
-        <div className="flex flex-col gap-3">
-          {approveError && (
-            <p className="text-red-400 text-sm text-center">{approveError}</p>
-          )}
-          <button
-            onClick={handleApprove}
-            disabled={approving}
-            className="btn-neon w-full flex items-center justify-center gap-2 text-base py-4"
-          >
-            {approving ? (
-              <>
-                <Spinner size="sm" />
-                <span>Approving…</span>
-              </>
-            ) : (
-              <>
-                <span>✅</span>
-                <span>Approve Entry</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
     </div>
   )
 }
